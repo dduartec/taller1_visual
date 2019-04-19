@@ -1,6 +1,8 @@
 PGraphics pg1;
 PGraphics pg2;
 PImage img;
+import processing.video.*;
+Movie mov;
 Button gs;
 Button c1;
 Button c2;
@@ -12,7 +14,7 @@ boolean conv3=false;
 void setup() {
   size(1000, 1000);
   surface.setResizable(true);
-  selectInput("Select a image to process:", "fileSelected");
+  selectInput("Select a file to process:", "fileSelected");
 }
 
 void draw() {
@@ -77,7 +79,7 @@ void draw() {
       int matrixsize = 3;
       for (int x = 0; x < pg2.width; x++) {
         for (int y = 0; y < pg2.height; y++ ) {
-          color c = convolution(x, y, matrix, matrixsize, img);
+          color c = convolution(x, y, matrix, matrixsize, pg1);
           int loc = x + y*pg2.width;
           pg2.pixels[loc] = c;
         }
@@ -110,7 +112,116 @@ void draw() {
       int y = int(map(hist[which], 0, histMax, pg2.height, 0));
       line(i+pg2.width+100, pg2.height+50, i+pg2.width+100, y+50);
     }
+  } else if (mov!=null) {
+    mov.play();
+    pg1=createGraphics(640, 360);
+    pg1.beginDraw();
+    pg1.image(mov, 0, 0);
+    pg1.endDraw();
+    float widthB=mov.width/4;
+    gs = new Button("GS", mov.width+100, 25, widthB, 20);
+    c1 = new Button("C1", mov.width+100+widthB, 25, widthB, 20);
+    c2 = new Button("C2", mov.width+100+widthB+widthB, 25, widthB, 20);
+    c3 = new Button("C3", mov.width+100+widthB+widthB+widthB, 25, widthB, 20);
+    image(pg1, 50, 50);
+    //botones
+    gs.Draw();
+    c1.Draw();
+    c2.Draw();
+    c3.Draw();
+    pg2=createGraphics(640, 360);
+    pg2.beginDraw();
+    pg2.image(mov, 0, 0); 
+
+    pg2.loadPixels();
+    //escala de grises;
+    if (greyscale==true) {
+      int pixels=pg2.width*pg2.height;
+      for (int i=0; i<pixels; i++) {
+        float r=red(pg2.pixels[i]);
+        float g=green(pg2.pixels[i]);
+        float b=blue(pg2.pixels[i]);
+        pg2.pixels[i]=color((r+g+b)/3);
+      }
+    } else if (conv1==true) {
+      float[][] matrix = { { -2, -1, 0 }, 
+        { -1, 1, 1 }, 
+        { 0, 1, 2 } }; 
+      int matrixsize = 3;
+      for (int x = 0; x < mov.width; x++) {
+        for (int y = 0; y < mov.height; y++ ) {
+          color c = convolution(x, y, matrix, matrixsize, mov);
+          int loc = x + y*pg2.width;
+          pg2.pixels[loc] = c;
+        }
+      }
+    } else if (conv2==true) {
+      float[][] matrix = { { -1, -1, -1 }, 
+        { -1, 8, -1 }, 
+        { -1, -1, -1 } }; 
+      int matrixsize = 3;
+      for (int x = 0; x < mov.width; x++) {
+        for (int y = 0; y < mov.height; y++ ) {
+          color c = convolution(x, y, matrix, matrixsize, mov);
+          int loc = x + y*pg2.width;
+          pg2.pixels[loc] = c;
+        }
+      }
+    } else if (conv3==true) {
+      float[][] matrix = { { 0, -1, 0 }, 
+        { -1, 5, -1 }, 
+        { 0, -1, 0 } }; 
+      int matrixsize = 3;
+      for (int x = 0; x < mov.width; x++) {
+        for (int y = 0; y < mov.height; y++ ) {
+          color c = convolution(x, y, matrix, matrixsize, pg1);
+          int loc = x + y*pg2.width;
+          pg2.pixels[loc] = c;
+        }
+      }
+    }
+
+    pg2.updatePixels();
+    pg2.text(getFrame() + " / " + (getLength() - 1), 10, 30);
+    pg2.text(mov.frameRate, mov.width-50, 30);
+    pg2.endDraw();  
+    image(pg2, mov.width+100, 50);
+
+    //histograma
+    int[] hist = new int[256];
+
+    // Calculate the histogram
+    for (int i = 0; i < pg2.width; i++) {
+      for (int j = 0; j < pg2.height; j++) {
+        int bright = int(brightness(pg2.get(i, j)));
+        hist[bright]++;
+      }
+    }
+
+    int histMax = max(hist);
+    stroke(255);
+    // Draw half of the histogram (skip every second value)
+    for (int i = 0; i < pg2.width; i += 2) {
+      // Map i (from 0..mov.width) to a location in the histogram (0..255)
+      int which = int(map(i, 0, pg2.width, 0, 255));
+      // Convert the histogram value to a location between 
+      // the bottom and the top of the picture
+      int y = int(map(hist[which], 0, histMax, pg2.height, 0));
+      line(i+pg2.width+100, pg2.height+50, i+pg2.width+100, y+50);
+    }
   }
+}
+
+void movieEvent(Movie m) {
+  m.read();
+}
+
+int getLength() {
+  return int(mov.duration() * mov.frameRate);
+}
+
+int getFrame() {    
+  return ceil(mov.time() * 30) - 1;
 }
 
 color convolution(int x, int y, float[][] matrix, int matrixsize, PImage img)
@@ -146,8 +257,13 @@ void fileSelected(File selection) {
     println("Window was closed or the user hit cancel.");
     exit();
   } else {
-    img=  loadImage(selection.getAbsolutePath());
-    surface.setSize((img.width*2)+150, img.height+100);
+    if (selection.getAbsolutePath().contains(".mp4")) {
+      mov = new Movie(this, selection.getAbsolutePath());
+      surface.setSize(640*2 +150, 360+100);
+    } else {
+      img=  loadImage(selection.getAbsolutePath());
+      surface.setSize((img.width*2)+150, img.height+100);
+    }
   }
 }
 
