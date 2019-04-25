@@ -1,41 +1,54 @@
+//canvas
 PGraphics pg1;
 PGraphics pg2;
+//imagen
 PImage img;
+//libreria para el video
 import processing.video.*;
+//video
 Movie mov;
+//BOTONES
+//escala de grises
 Button gs;
+//convolucion 1
 Button c1;
+//convolucion 2
 Button c2;
+//convolucion 3
 Button c3;
 boolean greyscale=false;
 boolean conv1=false;
 boolean conv2=false;
 boolean conv3=false;
+
 void setup() {
   size(1000, 1000);
   surface.setResizable(true);
+  //seleccion del archivo (video o imagen)
   selectInput("Select a file to process:", "fileSelected");
 }
 
 void draw() {
+  //IMAGEN
   if (img!=null) {
     pg1=createGraphics(img.width, img.height);
     pg2=createGraphics(img.width, img.height);
+    //canvas 1 imagen original
     pg1.beginDraw();
     pg1.image(img, 0, 0);
-    pg1.endDraw();
+    pg1.endDraw();    
+    image(pg1, 50, 50);
+    //Botones
     float widthB=img.width/4;
     gs = new Button("GS", img.width+100, 25, widthB, 20);
     c1 = new Button("C1", img.width+100+widthB, 25, widthB, 20);
     c2 = new Button("C2", img.width+100+widthB+widthB, 25, widthB, 20);
     c3 = new Button("C3", img.width+100+widthB+widthB+widthB, 25, widthB, 20);
-    image(pg1, 50, 50);
-    //botones
     gs.Draw();
     c1.Draw();
     c2.Draw();
     c3.Draw();
-
+    //canvas 2 imagen modificada
     pg2.beginDraw();
     pg2.image(img, 0, 0);
     pg2.loadPixels();
@@ -49,6 +62,7 @@ void draw() {
         pg2.pixels[i]=color((r+g+b)/3);
       }
     } else if (conv1==true) {
+      //convolucion 1
       float[][] matrix = { { -2, -1, 0 }, 
         { -1, 1, 1 }, 
         { 0, 1, 2 } }; 
@@ -61,6 +75,7 @@ void draw() {
         }
       }
     } else if (conv2==true) {
+      //convolucion 2
       float[][] matrix = { { -1, -1, -1 }, 
         { -1, 8, -1 }, 
         { -1, -1, -1 } }; 
@@ -73,6 +88,7 @@ void draw() {
         }
       }
     } else if (conv3==true) {
+      //convolucion 3
       float[][] matrix = { { 0, -1, 0 }, 
         { -1, 5, -1 }, 
         { 0, -1, 0 } }; 
@@ -113,26 +129,33 @@ void draw() {
       line(i+pg2.width+100, pg2.height+50, i+pg2.width+100, y+50);
     }
   } else if (mov!=null) {
+    //VIDEO
     mov.play();
-    pg1=createGraphics(640, 360);
+    if (mov.width>0) {
+      pg1=createGraphics(mov.width, mov.height);
+      pg2=createGraphics(mov.width, mov.height);
+    } else {
+      pg1=createGraphics(640, 360);
+      pg2=createGraphics(640, 360);
+    }
+    //canvas 1 video original
     pg1.beginDraw();
     pg1.image(mov, 0, 0);
     pg1.endDraw();
-    float widthB=mov.width/4;
-    gs = new Button("GS", mov.width+100, 25, widthB, 20);
-    c1 = new Button("C1", mov.width+100+widthB, 25, widthB, 20);
-    c2 = new Button("C2", mov.width+100+widthB+widthB, 25, widthB, 20);
-    c3 = new Button("C3", mov.width+100+widthB+widthB+widthB, 25, widthB, 20);
-    image(pg1, 50, 50);
+    image(pg1, 50, 50, 640, 360);
     //botones
+    float widthB=640/4;
+    gs = new Button("GS", 640+100, 25, widthB, 20);
+    c1 = new Button("C1", 640+100+widthB, 25, widthB, 20);
+    c2 = new Button("C2", 640+100+widthB+widthB, 25, widthB, 20);
+    c3 = new Button("C3", 640+100+widthB+widthB+widthB, 25, widthB, 20);
     gs.Draw();
     c1.Draw();
     c2.Draw();
     c3.Draw();
-    pg2=createGraphics(640, 360);
+    //canvas 2
     pg2.beginDraw();
-    pg2.image(mov, 0, 0); 
-
+    pg2.image(mov, 0, 0);
     pg2.loadPixels();
     //escala de grises;
     if (greyscale==true) {
@@ -144,6 +167,7 @@ void draw() {
         pg2.pixels[i]=color((r+g+b)/3);
       }
     } else if (conv1==true) {
+      //convolucion 1
       float[][] matrix = { { -2, -1, 0 }, 
         { -1, 1, 1 }, 
         { 0, 1, 2 } }; 
@@ -156,6 +180,7 @@ void draw() {
         }
       }
     } else if (conv2==true) {
+      //convolucion 2
       float[][] matrix = { { -1, -1, -1 }, 
         { -1, 8, -1 }, 
         { -1, -1, -1 } }; 
@@ -168,6 +193,7 @@ void draw() {
         }
       }
     } else if (conv3==true) {
+      //convolucion 3
       float[][] matrix = { { 0, -1, 0 }, 
         { -1, 5, -1 }, 
         { 0, -1, 0 } }; 
@@ -181,11 +207,14 @@ void draw() {
       }
     }
 
-    pg2.updatePixels();
-    pg2.text(getFrame() + " / " + (getLength() - 1), 10, 30);
-    pg2.text(mov.frameRate, mov.width-50, 30);
-    pg2.endDraw();  
-    image(pg2, mov.width+100, 50);
+    pg2.updatePixels();   
+    pg2.textSize(map(3,0,100,0,mov.width));
+    //frame actual
+    pg2.text(getFrame() + " / " + (getLength() - 1), map(10,0,640,0,mov.width), map(30,0,640,0,mov.width));
+    //frames por segundo
+    pg2.text(this.frameRate, mov.width-map(50,0,640,0,mov.width), map(30,0,640,0,mov.width));    
+    pg2.endDraw(); 
+    image(pg2, 640+100, 50,640,360);
 
     //histograma
     int[] hist = new int[256];
@@ -251,22 +280,27 @@ color convolution(int x, int y, float[][] matrix, int matrixsize, PImage img)
   // Return the resulting color
   return color(rtotal, gtotal, btotal);
 }
-
+//sleccion de archivo
 void fileSelected(File selection) {
   if (selection == null) {
     println("Window was closed or the user hit cancel.");
     exit();
   } else {
-    if (selection.getAbsolutePath().contains(".mp4")) {
+    //videos UNICAMENTE formato MP4 Y MOV
+    if (selection.getAbsolutePath().contains(".mp4")||selection.getAbsolutePath().contains(".mov")) {
       mov = new Movie(this, selection.getAbsolutePath());
+      //360 sera la resolucion de los canvas para video
+      //Modificacion tamaño de la ventana
       surface.setSize(640*2 +150, 360+100);
     } else {
+      //Imagenes
       img=  loadImage(selection.getAbsolutePath());
+      //Modificacion tamaño de la ventana
       surface.setSize((img.width*2)+150, img.height+100);
     }
   }
 }
-
+//Funcion pulsacion de los botones
 void mousePressed()
 {
   if (gs.MouseIsOver()) {
@@ -290,9 +324,9 @@ void mousePressed()
     conv2=false;
     conv3=true;
   }
-  println(greyscale+","+conv1+","+conv2+","+conv3);
+  //println(greyscale+","+conv1+","+conv2+","+conv3);
 }
-
+//Clase botones : http://blog.startingelectronics.com/a-simple-button-for-processing-language-code/
 class Button {
   String label;
   float x;    // top left corner x position
