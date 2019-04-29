@@ -5,6 +5,11 @@ PGraphics pg2;
 PImage img;
 //libreria para el video
 import processing.video.*;
+//libreria para input
+import controlP5.*;
+ControlP5 cp5;
+Textfield min,max;
+int RangoMin = 0,RangoMax = 255;
 //video
 Movie mov;
 //BOTONES
@@ -16,6 +21,10 @@ Button c1;
 Button c2;
 //convolucion 3
 Button c3;
+//quitar convolucion
+Button quitar;
+//segmentación
+Button s;
 boolean greyscale=false;
 boolean conv1=false;
 boolean conv2=false;
@@ -26,6 +35,22 @@ void setup() {
   surface.setResizable(true);
   //seleccion del archivo (video o imagen)
   selectInput("Select a file to process:", "fileSelected");
+  PFont font = createFont("arial",20);
+  cp5 = new ControlP5(this);
+  min = cp5.addTextfield("minimo");
+  min.setPosition(20,500)
+     .setSize(95,35)
+     .setFont(font)
+     .setFocus(true)
+     .setColor(color(255,0,0))
+     ;
+  max = cp5.addTextfield("maximo");
+  max.setPosition(20,500)
+     .setSize(95,35)
+     .setFont(font)
+     .setFocus(true)
+     .setColor(color(255,0,0))
+     ;
 }
 
 void draw() {
@@ -39,15 +64,23 @@ void draw() {
     pg1.endDraw();    
     image(pg1, 50, 50);
     //Botones
-    float widthB=img.width/4;
+    float widthB=img.width/5;
     gs = new Button("GS", img.width+100, 25, widthB, 20);
     c1 = new Button("C1", img.width+100+widthB, 25, widthB, 20);
     c2 = new Button("C2", img.width+100+widthB+widthB, 25, widthB, 20);
     c3 = new Button("C3", img.width+100+widthB+widthB+widthB, 25, widthB, 20);
+    quitar = new Button("Quitar", img.width+100+widthB+widthB+widthB+widthB, 25, widthB, 20);
     gs.Draw();
     c1.Draw();
     c2.Draw();
     c3.Draw();
+    quitar.Draw();
+    //Todo segmentado
+    min.setPosition(img.width+100,50+img.height+5);
+    max.setPosition(img.width+100+110,50+img.height+5);
+    //s = new Button("S", img.width+100+120+20, 50+img.height+5, widthB, 20);
+    s = new Button("Seg", img.width+100+120+100, 50+img.height+6, widthB, 30);
+    s.Draw();
     //canvas 2 imagen modificada
     pg2.beginDraw();
     pg2.image(img, 0, 0);
@@ -103,8 +136,6 @@ void draw() {
     }
 
     pg2.updatePixels();
-    pg2.endDraw();  
-    image(pg2, img.width+100, 50);
 
     //histograma
     int[] hist = new int[256];
@@ -114,15 +145,27 @@ void draw() {
       for (int j = 0; j < pg2.height; j++) {
         int bright = int(brightness(pg2.get(i, j)));
         hist[bright]++;
+        if(bright < RangoMin || bright > RangoMax){
+          int loc = i + j*pg2.width;
+          color c = color(0);
+          pg2.pixels[loc] = c;
+        }
       }
     }
 
+    pg2.updatePixels();
+    pg2.endDraw();  
+    image(pg2, img.width+100, 50);
+
     int histMax = max(hist);
-    stroke(255);
     // Draw half of the histogram (skip every second value)
     for (int i = 0; i < pg2.width; i += 2) {
+      stroke(255);
       // Map i (from 0..img.width) to a location in the histogram (0..255)
       int which = int(map(i, 0, pg2.width, 0, 255));
+      if(which >= RangoMin && which <= RangoMax){
+        stroke(255,0,0);
+      }
       // Convert the histogram value to a location between 
       // the bottom and the top of the picture
       int y = int(map(hist[which], 0, histMax, pg2.height, 0));
@@ -149,10 +192,17 @@ void draw() {
     c1 = new Button("C1", 640+100+widthB, 25, widthB, 20);
     c2 = new Button("C2", 640+100+widthB+widthB, 25, widthB, 20);
     c3 = new Button("C3", 640+100+widthB+widthB+widthB, 25, widthB, 20);
+    quitar = new Button("Quitar", 640+100+widthB+widthB+widthB, 25, widthB, 20);
     gs.Draw();
     c1.Draw();
     c2.Draw();
     c3.Draw();
+    quitar.Draw();
+    //Todo segmentado
+    min.setPosition(640+100,50+360+5);
+    max.setPosition(640+100+110,50+360+5);
+    s = new Button("Seg", 640+100+100+120+100, 50+360+6, widthB, 30);
+    s.Draw();
     //canvas 2
     pg2.beginDraw();
     pg2.image(mov, 0, 0);
@@ -208,13 +258,6 @@ void draw() {
     }
 
     pg2.updatePixels();   
-    pg2.textSize(map(3,0,100,0,mov.width));
-    //frame actual
-    pg2.text(getFrame() + " / " + (getLength() - 1), map(10,0,640,0,mov.width), map(30,0,640,0,mov.width));
-    //frames por segundo
-    pg2.text(this.frameRate, mov.width-map(50,0,640,0,mov.width), map(30,0,640,0,mov.width));    
-    pg2.endDraw(); 
-    image(pg2, 640+100, 50,640,360);
 
     //histograma
     int[] hist = new int[256];
@@ -224,21 +267,39 @@ void draw() {
       for (int j = 0; j < pg2.height; j++) {
         int bright = int(brightness(pg2.get(i, j)));
         hist[bright]++;
+        if(bright < RangoMin || bright > RangoMax){
+          int loc = i + j*pg2.width;
+          color c = color(0);
+          pg2.pixels[loc] = c;
+        }
       }
-    }
+    }    
+    pg2.updatePixels();   
+    pg2.textSize(map(3,0,100,0,mov.width));
+    //frame actual
+    pg2.text(getFrame() + " / " + (getLength() - 1), map(10,0,640,0,mov.width), map(30,0,640,0,mov.width));
+    //frames por segundo
+    pg2.text(this.frameRate, mov.width-map(50,0,640,0,mov.width), map(30,0,640,0,mov.width));
+    pg2.endDraw(); 
+    image(pg2, 640+100, 50,640,360);
 
     int histMax = max(hist);
     stroke(255);
     // Draw half of the histogram (skip every second value)
     for (int i = 0; i < pg2.width; i += 2) {
+      stroke(255);
       // Map i (from 0..mov.width) to a location in the histogram (0..255)
       int which = int(map(i, 0, pg2.width, 0, 255));
+      if(which >= RangoMin && which <= RangoMax){
+        stroke(255,0,0);
+      }
       // Convert the histogram value to a location between 
       // the bottom and the top of the picture
       int y = int(map(hist[which], 0, histMax, pg2.height, 0));
       line(i+pg2.width+100, pg2.height+50, i+pg2.width+100, y+50);
     }
   }
+  stroke(255);
 }
 
 void movieEvent(Movie m) {
@@ -250,7 +311,8 @@ int getLength() {
 }
 
 int getFrame() {    
-  return ceil(mov.time() * 30) - 1;
+  //return ceil(mov.time() * 30) - 1;
+  return ceil(mov.time() * mov.frameRate) - 1;
 }
 
 color convolution(int x, int y, float[][] matrix, int matrixsize, PImage img)
@@ -296,14 +358,22 @@ void fileSelected(File selection) {
       //Imagenes
       img=  loadImage(selection.getAbsolutePath());
       //Modificacion tamaño de la ventana
-      surface.setSize((img.width*2)+150, img.height+100);
+      surface.setSize((img.width*2)+150, img.height+120);
     }
   }
 }
 //Funcion pulsacion de los botones
 void mousePressed()
 {
-  if (gs.MouseIsOver()) {
+  if (quitar.MouseIsOver()) {
+    greyscale=false;
+    conv1=false;
+    conv2=false;
+    conv3=false;
+    RangoMin = 0;
+    RangoMax = 255;
+    println("Sin efectos");
+  }else if (gs.MouseIsOver()) {
     greyscale=true;
     conv1=false;
     conv2=false;
@@ -323,8 +393,32 @@ void mousePressed()
     conv1=false;
     conv2=false;
     conv3=true;
+  }else if (s.MouseIsOver()) {
+    if(!isNumeric(min.getText()) || !isNumeric(max.getText())){
+      println("Solo ingrese numeros!!");
+      return;
+    }
+    if(min.getText().equals("") || max.getText().equals("")){
+      println("Ingrese el rango!!");
+      return;
+    }
+    if(parseInt(min.getText()) > parseInt(max.getText())){
+      println("Ingrese un rango valido!!");
+      return;
+    }
+    RangoMin = parseInt(min.getText());
+    RangoMax = parseInt(max.getText());
+    println("Segmentar entre rango ["+RangoMin+","+RangoMax+"]");
   }
   //println(greyscale+","+conv1+","+conv2+","+conv3);
+}
+public static boolean isNumeric(String str) { 
+  try {  
+    Double.parseDouble(str);  
+    return true;
+  } catch(NumberFormatException e){  
+    return false;  
+  }  
 }
 //Clase botones : http://blog.startingelectronics.com/a-simple-button-for-processing-language-code/
 class Button {
