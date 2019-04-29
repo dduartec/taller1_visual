@@ -286,17 +286,17 @@ void draw() {
     int histMax = max(hist);
     stroke(255);
     // Draw half of the histogram (skip every second value)
-    for (int i = 0; i < pg2.width; i += 2) {
+    for (int i = 0; i < 640; i += 2) {
       stroke(255);
       // Map i (from 0..mov.width) to a location in the histogram (0..255)
-      int which = int(map(i, 0, pg2.width, 0, 255));
+      int which = int(map(i, 0, 640, 0, 255));
       if(which >= RangoMin && which <= RangoMax){
         stroke(255,0,0);
       }
       // Convert the histogram value to a location between 
       // the bottom and the top of the picture
-      int y = int(map(hist[which], 0, histMax, pg2.height, 0));
-      line(i+pg2.width+100, pg2.height+50, i+pg2.width+100, y+50);
+      int y = int(map(hist[which], 0, histMax, 360, 0));
+      line(i+640+100,360+50, i+640+100, y+50);
     }
   }
   stroke(255);
